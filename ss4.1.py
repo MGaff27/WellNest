@@ -1,3 +1,4 @@
+import threading
 import tkinter as tk
 from tkinter import messagebox, simpledialog, Toplevel, Checkbutton, IntVar
 from tkcalendar import Calendar
@@ -49,7 +50,6 @@ def load_data():
         with open(notes_file, "r") as file:
             notes = json.load(file)
 
-
 # Save data to files
 def save_data():
     with open(prescriptions_file, "w") as file:
@@ -60,7 +60,6 @@ def save_data():
         json.dump(tasks, file)
     with open(notes_file, "w") as file:
         json.dump(notes, file)
-
 
 # Google Calendar Authentication
 def authenticate_google_calendar():
@@ -77,7 +76,6 @@ def authenticate_google_calendar():
             token.write(creds.to_json())
     return build('calendar', 'v3', credentials=creds)
 
-
 # Show Splash Screen
 def splash_screen():
     splash = tk.Toplevel()
@@ -85,7 +83,7 @@ def splash_screen():
     splash.overrideredirect(True)
     splash.title("WellNest")
 
-    splash_img = Image.open("wellnest_splash.png")
+    splash_img = Image.open("wellnest_splash_final.png")
     splash_img = splash_img.resize((600, 400), Image.Resampling.LANCZOS)
     splash_img = ImageTk.PhotoImage(splash_img)
 
@@ -95,22 +93,19 @@ def splash_screen():
 
     splash.after(3000, lambda: close_splash_and_show_main(splash))
 
-
 # Close splash and show main window
 def close_splash_and_show_main(splash):
     splash.destroy()
-    root.deiconify()  # Show the main window
-
+    root.deiconify()
 
 # Main window setup
 root = tk.Tk()
 root.title("WellNest")
 root.geometry("400x600")
-root.withdraw()  # Hide the main window until splash screen closes
+root.withdraw()
 
 # Load data
 load_data()
-
 
 # User login/signup with Firebase
 def signup_user():
@@ -119,7 +114,6 @@ def signup_user():
     if email and password:
         db.collection('users').document(email).set({'password': password})
         messagebox.showinfo("Signup", "Signup successful!")
-
 
 def login_user():
     email = simpledialog.askstring("Login", "Enter email:")
@@ -130,8 +124,153 @@ def login_user():
     else:
         messagebox.showerror("Login", "Invalid credentials")
 
+# Add task with delegation
+def add_task(cal):
+    selected_date = cal.get_date()
+    task_name = simpledialog.askstring("Task", "Enter the task name:")
+    assignee = simpledialog.askstring("Assign Task", "Assign this task to someone:")
+    status = "in-progress"
+    if task_name and assignee:
+        if selected_date not in tasks:
+            tasks[selected_date] = []
+        task = {'name': task_name, 'assignee': assignee, 'status': status}
+        tasks[selected_date].append(task)
+        save_data()
 
-# Buttons to interact with the calendar
+# Manage task status
+def manage_task_status():
+    selected_date = simpledialog.askstring("Manage Task", "Enter the date (yyyy-mm-dd):")
+    if selected_date and selected_date in tasks:
+        manage_window = Toplevel(root)
+        manage_window.title(f"Manage Tasks for {selected_date}")
+        manage_window.geometry("400x400")
+
+        for task in tasks[selected_date]:
+            var = tk.StringVar(value=task['status'])
+            label = tk.Label(manage_window, text=f"{task['name']} - Assignee: {task['assignee']}")
+            label.pack()
+            dropdown = tk.OptionMenu(manage_window, var, "in-progress", "completed")
+            dropdown.pack()
+
+            var.trace('w', lambda *args, name=task['name']: update_task_status(selected_date, name, var.get()))
+
+# Update task status
+def update_task_status(date, task_name, status):
+    for task in tasks[date]:
+        if task['name'] == task_name:
+            task['status'] = status
+    save_data()
+
+# Add appointment to Google Calendar
+def add_appointment(cal):
+    global google_calendar_service
+    selected_date = cal.get_date()
+    time = simpledialog.askstring("Time", "Enter appointment time:")
+    doctor = simpledialog.askstring("Doctor", "Enter doctor's name:")
+    location = simpledialog.askstring("Location", "Enter location:")
+    if all([time, doctor, location]):
+        appointment = f"Appointment at {time} with {doctor} at {location}"
+        if selected_date not in appointments:
+            appointments[selected_date] = []
+        appointments[selected_date].append(appointment)
+        save_data()
+
+        # Add to Google Calendar
+        event = {
+            'summary': f"Appointment with Dr. {doctor}",
+            'location': location,
+            'description': f"Appointment at {time} with Dr. {doctor} at {location}",
+            'start': {
+                'dateTime': f"{selected_date}T{time}:00",
+                'timeZone': 'America/New_York',
+            },
+            'end': {
+                'dateTime': f"{selected_date}T{time}:30",
+                'timeZone': 'America/New_York',
+            },
+        }
+        google_calendar_service.events().insert(calendarId='primary', body=event).execute()
+
+# Manage and delete tasks/appointments
+def view_and_manage_items(cal):
+    selected_date = cal.get_date()
+    tasks_today = tasks.get(selected_date, [])
+    appointments_today = appointments.get(selected_date, [])
+
+    if tasks_today or appointments_today:
+        manage_window = Toplevel(root)
+        manage_window.title(f"Manage Items for {selected_date}")
+        manage_window.geometry("400x400")
+
+        task_vars = []
+        appointment_vars = []
+
+        if tasks_today:
+            tk.Label(manage_window, text="Tasks:").pack(pady=10)
+            for task in tasks_today:
+                var = IntVar()
+                cb = Checkbutton(manage_window, text=f"{task['name']} - Assignee: {task['assignee']}", variable=var)
+                cb.pack(anchor='w')
+                task_vars.append(var)
+
+        if appointments_today:
+            tk.Label(manage_window, text="Appointments:").pack(pady=10)
+            for app in appointments_today:
+                var = IntVar()
+                cb = Checkbutton(manage_window, text=app, variable=var)
+                cb.pack(anchor='w')
+                appointment_vars.append(var)
+
+        tk.Button(manage_window, text="Delete Selected",
+                  command=lambda: [delete_selected_items(selected_date, task_vars, appointment_vars),
+                                   manage_window.destroy()]).pack(pady=20)
+
+# Delete selected tasks/appointments
+def delete_selected_items(selected_date, task_vars, appointment_vars):
+    if selected_date in tasks:
+        tasks_to_delete = [task for i, task in enumerate(tasks[selected_date]) if task_vars[i].get() == 1]
+        for task in tasks_to_delete:
+            tasks[selected_date].remove(task)
+        if not tasks[selected_date]:
+            del tasks[selected_date]
+
+    if selected_date in appointments:
+        apps_to_delete = [app for i, app in enumerate(appointments[selected_date]) if appointment_vars[i].get() == 1]
+        for app in apps_to_delete:
+            appointments[selected_date].remove(app)
+        if not appointments[selected_date]:
+            del appointments[selected_date]
+
+    save_data()
+
+# Read out today's tasks and appointments
+def view_and_read_out_tasks():
+    today = datetime.datetime.now().strftime('%Y-%m-%d')
+    engine = pyttsx3.init()
+
+    tasks_today = tasks.get(today, [])
+    if tasks_today:
+        tasks_str = "\n".join([task['name'] for task in tasks_today])
+        engine.say(f"Today is {datetime.datetime.now().strftime('%A')}. Your tasks for today are: {tasks_str}")
+        messagebox.showinfo("Today's Tasks", f"Tasks:\n{tasks_str}")
+    else:
+        engine.say(f"Today is {datetime.datetime.now().strftime('%A')}. You have no tasks for today.")
+    engine.runAndWait()
+
+def view_and_read_out_appointments():
+    today = datetime.datetime.now().strftime('%Y-%m-%d')
+    engine = pyttsx3.init()
+
+    appointments_today = appointments.get(today, [])
+    if appointments_today:
+        appointments_str = "\n".join(appointments_today)
+        engine.say(f"Today is {datetime.datetime.now().strftime('%A')}. Your appointments for today are: {appointments_str}")
+        messagebox.showinfo("Today's Appointments", f"Appointments:\n{appointments_str}")
+    else:
+        engine.say(f"Today is {datetime.datetime.now().strftime('%A')}. You have no appointments for today.")
+    engine.runAndWait()
+
+# Open the calendar window
 def open_calendar():
     calendar_window = tk.Toplevel(root)
     calendar_window.title("Calendar")
@@ -152,149 +291,14 @@ def open_calendar():
     tk.Button(calendar_window, text="View and Manage Items", command=lambda: view_and_manage_items(cal)).pack(pady=5)
     tk.Button(calendar_window, text="Back to Main Menu", command=calendar_window.destroy).pack(pady=5)
 
-
-# Add task
-def add_task(cal):
-    selected_date = cal.get_date()
-    task_name = simpledialog.askstring("Task", "Enter the task name:")
-    if task_name:
-        if selected_date not in tasks:
-            tasks[selected_date] = []
-        tasks[selected_date].append(task_name)
-        save_data()
-
-
-# Add note
-def add_note_for_date(cal):
-    selected_date = cal.get_date()
-    note = simpledialog.askstring("Note", f"Add a note for {selected_date}:")
-    if note:
-        notes[selected_date] = note
-        save_data()
-
-
-# View tasks, notes, and appointments
-def view_items(cal):
-    selected_date = cal.get_date()
-    items = []
-    if selected_date in tasks:
-        items.append(f"Tasks: {', '.join(tasks[selected_date])}")
-    if selected_date in appointments:
-        items.append(f"Appointments: {', '.join(appointments[selected_date])}")
-    if selected_date in notes:
-        items.append(f"Note: {notes[selected_date]}")
-    if items:
-        messagebox.showinfo(f"Items for {selected_date}", "\n".join(items))
-    else:
-        messagebox.showinfo(f"Items for {selected_date}", "No items found for this date.")
-
-
-# Add appointment
-def add_appointment(cal):
-    selected_date = cal.get_date()
-    time = simpledialog.askstring("Time", "Enter appointment time:")
-    doctor = simpledialog.askstring("Doctor", "Enter doctor's name:")
-    location = simpledialog.askstring("Location", "Enter location:")
-    if all([time, doctor, location]):
-        appointment = f"Appointment at {time} with {doctor} at {location}"
-        if selected_date not in appointments:
-            appointments[selected_date] = []
-        appointments[selected_date].append(appointment)
-        save_data()
-
-
-# Delete tasks and appointments
-def view_and_manage_items(cal):
-    selected_date = cal.get_date()
-    tasks_today = tasks.get(selected_date, [])
-    appointments_today = appointments.get(selected_date, [])
-
-    if tasks_today or appointments_today:
-        manage_window = Toplevel(root)
-        manage_window.title(f"Manage Items for {selected_date}")
-        manage_window.geometry("400x400")
-
-        task_vars = []
-        appointment_vars = []
-
-        if tasks_today:
-            tk.Label(manage_window, text="Tasks:").pack(pady=10)
-            for task in tasks_today:
-                var = IntVar()
-                cb = Checkbutton(manage_window, text=task, variable=var)
-                cb.pack(anchor='w')
-                task_vars.append(var)
-
-        if appointments_today:
-            tk.Label(manage_window, text="Appointments:").pack(pady=10)
-            for app in appointments_today:
-                var = IntVar()
-                cb = Checkbutton(manage_window, text=app, variable=var)
-                cb.pack(anchor='w')
-                appointment_vars.append(var)
-
-        tk.Button(manage_window, text="Delete Selected",
-                  command=lambda: [delete_selected_items(selected_date, task_vars, appointment_vars),
-                                   manage_window.destroy()]).pack(pady=20)
-
-
-# Delete items based on selection
-def delete_selected_items(selected_date, task_vars, appointment_vars):
-    if selected_date in tasks:
-        tasks_to_delete = [task for i, task in enumerate(tasks[selected_date]) if task_vars[i].get() == 1]
-        for task in tasks_to_delete:
-            tasks[selected_date].remove(task)
-        if not tasks[selected_date]:
-            del tasks[selected_date]
-
-    if selected_date in appointments:
-        apps_to_delete = [app for i, app in enumerate(appointments[selected_date]) if appointment_vars[i].get() == 1]
-        for app in apps_to_delete:
-            appointments[selected_date].remove(app)
-        if not appointments[selected_date]:
-            del appointments[selected_date]
-
-    save_data()
-
-
-# Function to read out tasks and appointments for today
-def view_and_read_out_tasks():
-    today = datetime.datetime.now().strftime('%Y-%m-%d')
-    engine = pyttsx3.init()
-
-    tasks_today = tasks.get(today, [])
-    if tasks_today:
-        tasks_str = "\n".join(tasks_today)
-        engine.say(f"Today is {datetime.datetime.now().strftime('%A')}. Your tasks for today are: {tasks_str}")
-        messagebox.showinfo("Today's Tasks", f"Tasks:\n{tasks_str}")
-    else:
-        engine.say(f"Today is {datetime.datetime.now().strftime('%A')}. You have no tasks for today.")
-    engine.runAndWait()
-
-
-# Function to read out appointments for today
-def view_and_read_out_appointments():
-    today = datetime.datetime.now().strftime('%Y-%m-%d')
-    engine = pyttsx3.init()
-
-    appointments_today = appointments.get(today, [])
-    if appointments_today:
-        appointments_str = "\n".join(appointments_today)
-        engine.say(
-            f"Today is {datetime.datetime.now().strftime('%A')}. Your appointments for today are: {appointments_str}")
-        messagebox.showinfo("Today's Appointments", f"Appointments:\n{appointments_str}")
-    else:
-        engine.say(f"Today is {datetime.datetime.now().strftime('%A')}. You have no appointments for today.")
-    engine.runAndWait()
-
-
 # Buttons for main menu
-tk.Button(root, text="Calendar", command=open_calendar).pack(pady=30)
-tk.Button(root, text="View and Read Out Today's Tasks", command=view_and_read_out_tasks).pack(pady=30)
-tk.Button(root, text="View and Read Out Today's Appointments", command=view_and_read_out_appointments).pack(pady=30)
-tk.Button(root, text="Signup", command=signup_user).pack(pady=30)
-tk.Button(root, text="Login", command=login_user).pack(pady=30)
-tk.Button(root, text="Close", command=root.quit).pack(pady=30)
+tk.Button(root, text="Calendar", command=open_calendar).pack(pady=20)
+tk.Button(root, text="Manage Task Status", command=manage_task_status).pack(pady=20)
+tk.Button(root, text="View and Read Out Today's Tasks", command=view_and_read_out_tasks).pack(pady=20)
+tk.Button(root, text="View and Read Out Today's Appointments", command=view_and_read_out_appointments).pack(pady=20)
+tk.Button(root, text="Signup", command=signup_user).pack(pady=20)
+tk.Button(root, text="Login", command=login_user).pack(pady=20)
+tk.Button(root, text="Close", command=root.quit).pack(pady=20)
 
 # Run splash screen
 splash_screen()
