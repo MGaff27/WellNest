@@ -39,9 +39,9 @@ prescriptions = {}
 SCOPES = ['https://www.googleapis.com/auth/calendar.events']
 
 # Firebase Initialization
-cred = credentials.Certificate("firebase_credentials.json")
-firebase_admin.initialize_app(cred)
-db = firestore.client()
+#cred = credentials.Certificate("firebase_credentials.json")
+#firebase_admin.initialize_app(cred)
+#db = firestore.client()
 
 # Load prescriptions from the JSON file
 def load_prescriptions(filename="prescriptions.json"):
@@ -104,7 +104,7 @@ def authenticate_google_calendar():
 
 # Validate future dates
 def validate_future_date(selected_date):
-    today = datetime.datetime.now().strftime('%Y-%m-%d')
+    today = datetime.now().strftime('%Y-%m-%d')
     if selected_date < today:
         messagebox.showerror("Date Error", "Cannot add tasks or appointments to a past date.")
         return False
@@ -174,7 +174,7 @@ def submit(day_entry, month_entry, year_entry, days_entry, weeks_entry,
 
     # Validate inputs
     try:
-        start_date = datetime.datetime(int(startYr), int(startMon), int(startDay))
+        start_date = datetime(int(startYr), int(startMon), int(startDay))
     except ValueError:
         messagebox.showerror("Input Error", "Please enter a valid start date.")
         return
@@ -261,7 +261,7 @@ def open_prescription_manager():
 # Function to schedule prescription dates based on input parameters
 def prescriptionScheduler(startDay, startMon, startYr, days, numWeeks, medication_info):
     # Initialize the starting date
-    start_date = datetime.datetime(int(startYr), int(startMon), int(startDay))
+    start_date = datetime(int(startYr), int(startMon), int(startDay))
 
     # Dictionary to store prescription dates
     prescriptionDays = {
@@ -541,7 +541,7 @@ def open_calendar():
     tk.Button(center_frame, text="Back to Main Menu", command=calendar_window.destroy).pack(pady=5)
 
 def check_upcoming_events():
-    today = datetime.datetime.now().strftime('%Y-%m-%d')
+    today = datetime.now().strftime('%Y-%m-%d')
     tasks_today = tasks.get(today, [])
     appointments_today = appointments.get(today, [])
 
@@ -714,30 +714,30 @@ def delete_selected_items(selected_date, task_vars, appointment_vars):
 
 # Read out today's tasks
 def view_and_read_out_tasks():
-    today = datetime.datetime.now().strftime('%Y-%m-%d')
+    today = datetime.now().strftime('%Y-%m-%d')
     engine = pyttsx3.init()
 
     tasks_today = tasks.get(today, [])
     if tasks_today:
         tasks_str = "\n".join([task['name'] for task in tasks_today])
-        engine.say(f"Today is {datetime.datetime.now().strftime('%A')}. Your tasks for today are: {tasks_str}")
+        engine.say(f"Today is {datetime.now().strftime('%A')}. Your tasks for today are: {tasks_str}")
         messagebox.showinfo("Today's Tasks", f"Tasks:\n{tasks_str}")
     else:
-        engine.say(f"Today is {datetime.datetime.now().strftime('%A')}. You have no tasks for today.")
+        engine.say(f"Today is {datetime.now().strftime('%A')}. You have no tasks for today.")
     engine.runAndWait()
 
 # Read out today's appointments
 def view_and_read_out_appointments():
-    today = datetime.datetime.now().strftime('%Y-%m-%d')
+    today =datetime.now().strftime('%Y-%m-%d')
     engine = pyttsx3.init()
 
     appointments_today = appointments.get(today, [])
     if appointments_today:
         appointments_str = "\n".join(appointments_today)
-        engine.say(f"Today is {datetime.datetime.now().strftime('%A')}. Your appointments for today are: {appointments_str}")
+        engine.say(f"Today is {datetime.now().strftime('%A')}. Your appointments for today are: {appointments_str}")
         messagebox.showinfo("Today's Appointments", f"Appointments:\n{appointments_str}")
     else:
-        engine.say(f"Today is {datetime.datetime.now().strftime('%A')}. You have no appointments for today.")
+        engine.say(f"Today is {datetime.now().strftime('%A')}. You have no appointments for today.")
     engine.runAndWait()
 
 #SECTION 5
