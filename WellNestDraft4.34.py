@@ -124,7 +124,7 @@ def splash_screen():
     splash.overrideredirect(True)
     splash.title("WellNest")
 
-    splash_img = Image.open("C:/Users/justi/PycharmProjects/pythonProject12007/wellnest_splash_final.png")
+    splash_img = Image.open("wellnest_splash_final.png")
     splash_img = splash_img.resize((600, 400), Image.Resampling.LANCZOS)
     splash_img = ImageTk.PhotoImage(splash_img)
 
