@@ -26,7 +26,7 @@ import datetime
 import time
 from datetime import datetime, timedelta
 from threading import Timer
-
+import matplotlib.dates as mdates
 # Files to store data
 appointments_file = "appointments.json"
 prescriptions_file = "prescriptions.json"
@@ -124,15 +124,15 @@ def splash_screen():
     splash.overrideredirect(True)
     splash.title("WellNest")
 
-    splash_img = Image.open("wellnest_splash_final.png")
-    splash_img = splash_img.resize((600, 400), Image.Resampling.LANCZOS)
-    splash_img = ImageTk.PhotoImage(splash_img)
+splash_img = Image.open("wellnest_splash_final.png")
+ splash_img = splash_img.resize((600, 400), Image.Resampling.LANCZOS)
+splash_img = ImageTk.PhotoImage(splash_img)
 
-    splash_label = tk.Label(splash, image=splash_img)
-    splash_label.image = splash_img
-    splash_label.pack()
+splash_label = tk.Label(splash, image=splash_img)
+splash_label.image = splash_img
+splash_label.pack()
 
-    splash.after(3000, lambda: close_splash_and_show_main(splash))
+splash.after(3000, lambda: close_splash_and_show_main(splash))
 
 
 # Close splash and show main window
@@ -162,14 +162,24 @@ def close_splash_and_show_main(splash):
 
 # Medication Schedule and Tracking
 def add_medication_schedule():
-    selected_date = simpledialog.askstring("Medication Schedule",
-                                           "Enter the date for medication schedule (yyyy-mm-dd):")
+    selected_date = simpledialog.askstring("Medication Schedule", "Enter the date for medication schedule (yyyy-mm-dd):")
     if not validate_future_date(selected_date):
         return
-    med_name = simpledialog.askstring("Medication", "Enter the medication name:")
-    if selected_date and med_name:
-        prescriptions[selected_date] = {'medication': med_name, 'status': 'scheduled'}
-        save_data()
+
+ med_name = simpledialog.askstring("Medication", "Enter the medication name:")
+if selected_date and med_name:
+    year, month, day = map(int, selected_date.split('-'))
+     if med_name not in prescriptions:
+         prescriptions[med_name] = {"Prescription": [], "Medication Info": {}}
+
+prescriptions[med_name]["Prescription"].append({
+            "Day": day,
+            "Month": month,
+            "Year": year,
+            "Status": "scheduled"
+        })
+        save_prescriptions(prescriptions)
+        messagebox.showinfo("Success", "Medication schedule added.")
 
 
 def submit(day_entry, month_entry, year_entry, days_entry, weeks_entry,
@@ -183,22 +193,22 @@ def submit(day_entry, month_entry, year_entry, days_entry, weeks_entry,
     medication_description = medication_description_entry.get().strip()
     taken_with_food = food_entry.get().strip()
 
-    # Validate inputs
-    try:
+ # Validate inputs
+ try:
         start_date = datetime(int(startYr), int(startMon), int(startDay))
     except ValueError:
         messagebox.showerror("Input Error", "Please enter a valid start date.")
         return
 
-    if not prescription_name:
+if not prescription_name:
         messagebox.showerror("Input Error", "Please enter a prescription name.")
         return
 
-    if not medication_description:
+ if not medication_description:
         messagebox.showerror("Input Error", "Please enter a medication description.")
         return
 
-    try:
+try:
         numWeeks = int(numWeeks)
         if numWeeks <= 0:
             raise ValueError
@@ -206,12 +216,12 @@ def submit(day_entry, month_entry, year_entry, days_entry, weeks_entry,
         messagebox.showerror("Input Error", "Please enter a valid positive number for weeks.")
         return
 
-    medication_info = {
+ medication_info = {
         "Description": medication_description,
         "Taken with food": taken_with_food
     }
 
-    try:
+try:
         # Schedule prescriptions
         prescriptionDays = prescriptionScheduler(startDay, startMon, startYr, days, numWeeks, medication_info)
         prescriptions[prescription_name] = prescriptionDays  # Save to global dictionary
@@ -229,41 +239,41 @@ def open_prescription_manager():
     prescription_window.title("Prescription Manager")
     prescription_window.geometry("300x500")  # Adjust the size as needed
 
-    # Add input fields to the new window
-    tk.Label(prescription_window, text="Prescription Name:").pack(pady=5)
+ # Add input fields to the new window
+ tk.Label(prescription_window, text="Prescription Name:").pack(pady=5)
     prescription_name_entry = tk.Entry(prescription_window)
     prescription_name_entry.pack()
 
-    tk.Label(prescription_window, text="Medication Description:").pack(pady=5)
+tk.Label(prescription_window, text="Medication Description:").pack(pady=5)
     medication_description_entry = tk.Entry(prescription_window)
     medication_description_entry.pack()
 
-    tk.Label(prescription_window, text="Taken with food (Yes/No):").pack(pady=5)
+ tk.Label(prescription_window, text="Taken with food (Yes/No):").pack(pady=5)
     food_entry = tk.Entry(prescription_window)
     food_entry.pack()
 
-    tk.Label(prescription_window, text="Start Day (DD):").pack(pady=5)
+ tk.Label(prescription_window, text="Start Day (DD):").pack(pady=5)
     day_entry = tk.Entry(prescription_window)
     day_entry.pack()
 
-    tk.Label(prescription_window, text="Start Month (MM):").pack(pady=5)
+tk.Label(prescription_window, text="Start Month (MM):").pack(pady=5)
     month_entry = tk.Entry(prescription_window)
     month_entry.pack()
 
-    tk.Label(prescription_window, text="Start Year (YYYY):").pack(pady=5)
+tk.Label(prescription_window, text="Start Year (YYYY):").pack(pady=5)
     year_entry = tk.Entry(prescription_window)
     year_entry.pack()
 
-    tk.Label(prescription_window, text="Days (e.g., Monday, Wednesday):").pack(pady=5)
+tk.Label(prescription_window, text="Days (e.g., Monday, Wednesday):").pack(pady=5)
     days_entry = tk.Entry(prescription_window)
     days_entry.pack()
 
-    tk.Label(prescription_window, text="Number of Weeks:").pack(pady=5)
+tk.Label(prescription_window, text="Number of Weeks:").pack(pady=5)
     weeks_entry = tk.Entry(prescription_window)
     weeks_entry.pack()
 
-    # Add a submit button to the new window
-    submit_button = tk.Button(prescription_window, text="Submit Prescription", command=lambda: submit(
+# Add a submit button to the new window
+submit_button = tk.Button(prescription_window, text="Submit Prescription", command=lambda: submit(
         day_entry, month_entry, year_entry, days_entry, weeks_entry,
         prescription_name_entry, medication_description_entry, food_entry, prescription_window
     ))
@@ -275,14 +285,14 @@ def prescriptionScheduler(startDay, startMon, startYr, days, numWeeks, medicatio
     # Initialize the starting date
     start_date = datetime(int(startYr), int(startMon), int(startDay))
 
-    # Dictionary to store prescription dates
-    prescriptionDays = {
+ # Dictionary to store prescription dates
+ prescriptionDays = {
         "Prescription": [],
         "Medication Info": medication_info
     }
 
-    # Mapping of day names to numbers
-    day_name_to_number = {
+# Mapping of day names to numbers
+day_name_to_number = {
         "Monday": 1,
         "Tuesday": 2,
         "Wednesday": 3,
@@ -292,51 +302,110 @@ def prescriptionScheduler(startDay, startMon, startYr, days, numWeeks, medicatio
         "Sunday": 7
     }
 
-    # Convert day names to numbers for easier scheduling
-    days_numbers = [day_name_to_number[day.strip()] for day in days if day.strip() in day_name_to_number]
+ # Convert day names to numbers for easier scheduling
+days_numbers = [day_name_to_number[day.strip()] for day in days if day.strip() in day_name_to_number]
 
-    # Generate prescription dates by week and day
-    for week in range(int(numWeeks)):
+# Generate prescription dates by week and day
+  for week in range(int(numWeeks)):
         for day in days_numbers:
             # Calculate date for each day specified in the week
             prescription_date = start_date + timedelta(weeks=week)
 
-            # Calculate day offset to target day in the current week
-            day_offset = (day - prescription_date.isoweekday()) % 7
+  # Calculate day offset to target day in the current week
+   day_offset = (day - prescription_date.isoweekday()) % 7
 
-            # Adjust date accordingly
-            prescription_date += timedelta(days=day_offset)
+ # Adjust date accordingly
+prescription_date += timedelta(days=day_offset)
 
-            # Store the calculated date
-            prescriptionDays["Prescription"].append({
+  # Store the calculated date
+ prescriptionDays["Prescription"].append({
                 "Day": prescription_date.day,
                 "Month": prescription_date.month,
                 "Year": prescription_date.year
             })
+return prescriptionDays
 
-    return prescriptionDays
 
+def update_prescription_status():
+    prescription_name = simpledialog.askstring("Update Status", "Enter the prescription name:")
+    if not prescription_name or prescription_name not in prescriptions:
+        messagebox.showerror("Error", "Prescription not found.")
+        return
 
-def update_medication_status():
-    selected_date = simpledialog.askstring("Medication Status", "Enter the date (yyyy-mm-dd):")
-    if selected_date and selected_date in prescriptions:
-        status = simpledialog.askstring("Medication Status", "Enter status: (taken on time/missed)")
-        if status:
-            prescriptions[selected_date]['status'] = status
-            save_data()
+prescription_date = simpledialog.askstring("Update Status", "Enter the date (yyyy-mm-dd):")
+    try:
+        date = datetime.strptime(prescription_date, "%Y-%m-%d")
+    except ValueError:
+        messagebox.showerror("Error", "Invalid date format. Use yyyy-mm-dd.")
+        return
+
+for entry in prescriptions[prescription_name]["Prescription"]:
+        if (entry["Day"] == date.day and
+                entry["Month"] == date.month and
+                entry["Year"] == date.year):
+            status = simpledialog.askstring("Update Status", "Enter the status (taken on time/missed):")
+            if not status:
+                messagebox.showerror("Error", "Status cannot be empty.")
+                return
+            
+# Normalize status input
+normalized_status = status.strip().lower()
+            
+print(f"User entered: {status}, normalized: {normalized_status}")  # Debugging line
+
+if normalized_status in ["taken on time", "missed"]:
+                entry["Status"] = normalized_status  # Update status for this date
+                save_prescriptions(prescriptions)
+                messagebox.showinfo("Success", f"Status for {prescription_date} updated to '{normalized_status}'.")
+                return
+            else:
+                messagebox.showerror("Error", "Invalid status. Use 'taken on time' or 'missed'.")
+                return
+
+ messagebox.showinfo("Not Found", "No prescription found for the specified date.")
+
 
 
 def display_medication_graph():
-    dates = list(prescriptions.keys())
-    statuses = [1 if prescriptions[date]['status'] == 'taken on time' else 0 for date in dates]
-    plt.plot(dates, statuses, marker='o')
-    plt.xticks(rotation=45)
-    plt.yticks([0, 1], ['Missed', 'On Time'])
+    dates_taken = []
+    dates_missed = []
+
+for prescription_name, details in prescriptions.items():
+        for prescription_entry in details.get("Prescription", []):
+            try:
+                day = prescription_entry["Day"]
+                month = prescription_entry["Month"]
+                year = prescription_entry["Year"]
+                status = prescription_entry.get("Status", "missed")
+                date = datetime(year, month, day)
+
+ if status == "taken on time":
+                    dates_taken.append(date)
+                else:
+                    dates_missed.append(date)
+            except KeyError:
+                continue
+
+if not dates_taken and not dates_missed:
+        messagebox.showinfo("No Data", "No medication data available to plot.")
+        return
+
+ plt.figure(figsize=(10, 6))
+    plt.scatter(dates_taken, [1] * len(dates_taken), color='green', label="Taken on Time", marker='o')
+    plt.scatter(dates_missed, [0] * len(dates_missed), color='red', label="Missed", marker='x')
     plt.title("Medication Status Over Time")
     plt.xlabel("Date")
     plt.ylabel("Status")
+    plt.yticks([0, 1], ["Missed", "Taken on Time"])
+    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
+    plt.gca().xaxis.set_major_locator(mdates.DayLocator(interval=1))
+    plt.xticks(rotation=45)
+    plt.legend()
     plt.tight_layout()
+    plt.grid(visible=True, linestyle='--', alpha=0.6)
     plt.show()
+
+
 
 
 # SECTION 3 (or near the start of SECTION 4)
@@ -348,26 +417,26 @@ def view_prescriptions():
     prescriptions_window.title("View Prescriptions")
     prescriptions_window.geometry("400x500")  # Adjust size as needed
 
-    # Display each prescription in the window
-    if prescriptions:
+# Display each prescription in the window
+ if prescriptions:
         for prescription_name, details in prescriptions.items():
             tk.Label(prescriptions_window, text=f"Prescription Name: {prescription_name}",
                      font=("Arial", 10, "bold")).pack(anchor='w', padx=10, pady=5)
 
-            for entry in details["Prescription"]:
+for entry in details["Prescription"]:
                 day, month, year = entry["Day"], entry["Month"], entry["Year"]
                 tk.Label(prescriptions_window, text=f"Date: {day}-{month}-{year}").pack(anchor='w', padx=20)
 
-            # Display medication info if available
-            if "Medication Info" in details:
-                tk.Label(prescriptions_window, text=f"Description: {details['Medication Info']['Description']}").pack(
+# Display medication info if available
+if "Medication Info" in details:
+        tk.Label(prescriptions_window, text=f"Description: {details['Medication Info']['Description']}").pack(
                     anchor='w', padx=20)
                 tk.Label(prescriptions_window,
                          text=f"Taken with food: {details['Medication Info']['Taken with food']}").pack(anchor='w',
                                                                                                         padx=20)
             tk.Label(prescriptions_window, text="-" * 50).pack(anchor='w', padx=10, pady=5)
 
-    else:
+else:
         tk.Label(prescriptions_window, text="No prescriptions found.", font=("Arial", 12)).pack(anchor='center',
                                                                                                 pady=20)
 
@@ -377,15 +446,15 @@ def check_for_upcoming_task_notifications():
     now = datetime.now()
     current_date = now.strftime('%Y-%m-%d')
 
-    if current_date in tasks:
+ if current_date in tasks:
         for task in tasks[current_date]:
             task_time_str = task.get('time')
             if task_time_str:
                 task_datetime = datetime.strptime(f"{current_date} {task_time_str}", '%Y-%m-%d %H:%M')
                 time_diff = (task_datetime - now).total_seconds()
 
-                # If task is due within the next hour (3600 seconds) and in the future
-                if 0 < time_diff <= 3600:
+  # If task is due within the next hour (3600 seconds) and in the future
+ if 0 < time_diff <= 3600:
                     notification.notify(
                         title="Upcoming Task",
                         message=f"Task '{task['name']}' is due at {task_time_str}.",
@@ -393,8 +462,8 @@ def check_for_upcoming_task_notifications():
                         timeout=10
                     )
 
-    # Schedule the function to check again in 5 minutes
-    Timer(300, check_for_upcoming_task_notifications).start()
+ # Schedule the function to check again in 5 minutes
+ Timer(300, check_for_upcoming_task_notifications).start()
 
 
 # Start the notification scheduler
@@ -409,10 +478,10 @@ def prompt_select_date_for_action(action, item_type):
     prompt_window.title(f"Select Date to {action} {item_type.capitalize()}")
     prompt_window.geometry("400x400")
 
-    cal = Calendar(prompt_window, selectmode='day', date_pattern="yyyy-mm-dd")
+ cal = Calendar(prompt_window, selectmode='day', date_pattern="yyyy-mm-dd")
     cal.pack(pady=20)
 
-    def on_date_selected():
+def on_date_selected():
         selected_date = cal.get_date()
         prompt_window.destroy()
         if item_type == "task":
@@ -420,7 +489,7 @@ def prompt_select_date_for_action(action, item_type):
         elif item_type == "appointment":
             manage_appointments_for_date(selected_date, action)
 
-    tk.Button(prompt_window, text=f"Select Date to {action} {item_type.capitalize()}", command=on_date_selected).pack(
+tk.Button(prompt_window, text=f"Select Date to {action} {item_type.capitalize()}", command=on_date_selected).pack(
         pady=10)
 
 
@@ -431,14 +500,14 @@ def manage_tasks_for_date(selected_date, action):
         manage_window.title(f"{action.capitalize()} Tasks for {selected_date}")
         manage_window.geometry("400x400")
 
-        task_vars = []
+task_vars = []
         for task in tasks[selected_date]:
             var = IntVar()
             cb = Checkbutton(manage_window, text=f"{task['name']} - Assignee: {task['assignee']}", variable=var)
             cb.pack(anchor='w')
             task_vars.append((var, task))
 
-        def apply_action():
+def apply_action():
             selected_tasks = [task for var, task in task_vars if var.get() == 1]
             if action == "Edit":
                 for task in selected_tasks:
@@ -456,7 +525,7 @@ def manage_tasks_for_date(selected_date, action):
                 messagebox.showinfo("Success", "Selected tasks deleted successfully.")
             manage_window.destroy()
 
-        tk.Button(manage_window, text=f"{action.capitalize()} Selected Tasks", command=apply_action).pack(pady=20)
+ tk.Button(manage_window, text=f"{action.capitalize()} Selected Tasks", command=apply_action).pack(pady=20)
     else:
         messagebox.showinfo("No Tasks", f"No tasks found for {selected_date}.")
 
@@ -468,14 +537,14 @@ def manage_appointments_for_date(selected_date, action):
         manage_window.title(f"{action.capitalize()} Appointments for {selected_date}")
         manage_window.geometry("400x400")
 
-        app_vars = []
+ app_vars = []
         for app in appointments[selected_date]:
             var = IntVar()
             cb = Checkbutton(manage_window, text=app, variable=var)
             cb.pack(anchor='w')
             app_vars.append((var, app))
 
-        def apply_action():
+def apply_action():
             selected_apps = [app for var, app in app_vars if var.get() == 1]
             if action == "Edit":
                 for app in selected_apps:
@@ -494,7 +563,7 @@ def manage_appointments_for_date(selected_date, action):
                 messagebox.showinfo("Success", "Selected appointments deleted successfully.")
             manage_window.destroy()
 
-        tk.Button(manage_window, text=f"{action.capitalize()} Selected Appointments", command=apply_action).pack(
+tk.Button(manage_window, text=f"{action.capitalize()} Selected Appointments", command=apply_action).pack(
             pady=20)
     else:
         messagebox.showinfo("No Appointments", f"No appointments found for {selected_date}.")
@@ -521,52 +590,52 @@ def open_calendar():
     calendar_window.title("Calendar")
     calendar_window.minsize(800, 600)
 
-    # Create frames for left, right, and center sections
-    left_frame = tk.Frame(calendar_window)
+# Create frames for left, right, and center sections
+ left_frame = tk.Frame(calendar_window)
     left_frame.pack(side="left", padx=10, pady=10)
 
-    right_frame = tk.Frame(calendar_window)
+right_frame = tk.Frame(calendar_window)
     right_frame.pack(side="right", padx=10, pady=10)
 
-    center_frame = tk.Frame(calendar_window)
+center_frame = tk.Frame(calendar_window)
     center_frame.pack(side="top", pady=10)
 
-    # Initialize the Calendar with increased size
-    cal = Calendar(center_frame, selectmode='day', date_pattern="yyyy-mm-dd", width=400, height=350)
+# Initialize the Calendar with increased size
+ cal = Calendar(center_frame, selectmode='day', date_pattern="yyyy-mm-dd", width=400, height=350)
     cal.pack(pady=10, fill='both', expand=True)
 
-    # Left frame: Add Task and View/Read Out Tasks
-    task_button_frame = tk.Frame(left_frame)
+# Left frame: Add Task and View/Read Out Tasks
+task_button_frame = tk.Frame(left_frame)
     task_button_frame.pack(pady=5)
 
-    add_task_button = tk.Button(task_button_frame, text="Add Task", command=lambda: add_task(cal))
-    add_task_button.pack(side="left")
+add_task_button = tk.Button(task_button_frame, text="Add Task", command=lambda: add_task(cal))
+ add_task_button.pack(side="left")
 
-    options_task_button = tk.Button(task_button_frame, text="⋮", command=lambda: None)
+options_task_button = tk.Button(task_button_frame, text="⋮", command=lambda: None)
     options_task_button.pack(side="left", padx=5)
     options_task_button.bind("<Button-1>", open_task_options_menu)
 
-    view_tasks_button = tk.Button(left_frame, text="View and Read Out Tasks", command=view_and_read_out_tasks)
+ view_tasks_button = tk.Button(left_frame, text="View and Read Out Tasks", command=view_and_read_out_tasks)
     view_tasks_button.pack(pady=5)
 
-    # Right frame: Add Appointment and View/Read Out Appointments
-    appointment_button_frame = tk.Frame(right_frame)
-    appointment_button_frame.pack(pady=5)
+# Right frame: Add Appointment and View/Read Out Appointments
+appointment_button_frame = tk.Frame(right_frame)
+appointment_button_frame.pack(pady=5)
 
-    add_appointment_button = tk.Button(appointment_button_frame, text="Add Appointment",
+ add_appointment_button = tk.Button(appointment_button_frame, text="Add Appointment",
                                        command=lambda: add_appointment(cal))
-    add_appointment_button.pack(side="left")
+add_appointment_button.pack(side="left")
 
-    options_appointment_button = tk.Button(appointment_button_frame, text="⋮", command=lambda: None)
+options_appointment_button = tk.Button(appointment_button_frame, text="⋮", command=lambda: None)
     options_appointment_button.pack(side="left", padx=5)
     options_appointment_button.bind("<Button-1>", open_appointment_options_menu)
 
-    view_appointments_button = tk.Button(right_frame, text="View and Read Out Appointments",
+view_appointments_button = tk.Button(right_frame, text="View and Read Out Appointments",
                                          command=view_and_read_out_appointments)
     view_appointments_button.pack(pady=5)
 
-    # Center frame: Add other buttons
-    tk.Button(center_frame, text="Add Note", command=lambda: add_note_for_date(cal)).pack(pady=5)
+# Center frame: Add other buttons
+   tk.Button(center_frame, text="Add Note", command=lambda: add_note_for_date(cal)).pack(pady=5)
     tk.Button(center_frame, text="View Medication Status Graph", command=display_medication_graph).pack(pady=5)
     tk.Button(center_frame, text="Check Upcoming Events", command=check_upcoming_events).pack(pady=5)
     tk.Button(center_frame, text="Send Email Notifications", command=send_email_notifications).pack(pady=5)
@@ -581,16 +650,16 @@ def find_medication_by_date(cal, prescription_data):
     # Get selected date from calendar in 'yyyy-mm-dd' format
     selected_date_str = cal.get_date()  # Example: '2024-11-16'
 
-    # Parse date in the format 'yyyy-mm-dd'
-    selected_date = datetime.strptime(selected_date_str, "%Y-%m-%d")
+ # Parse date in the format 'yyyy-mm-dd'
+selected_date = datetime.strptime(selected_date_str, "%Y-%m-%d")
 
-    # Extract day, month, year from the selected date
-    search_day = selected_date.day
+# Extract day, month, year from the selected date
+search_day = selected_date.day
     search_month = selected_date.month
     search_year = selected_date.year
 
-    # Prepare result message
-    found_prescriptions = []
+# Prepare result message
+found_prescriptions = []
     for med_name, details in prescription_data.items():
         for med_prescription in details["Prescription"]:
             # Check if the day, month, year match
@@ -603,8 +672,8 @@ def find_medication_by_date(cal, prescription_data):
                         f"Taken with food: {details['Medication Info']['Taken with food']}\n\n")
                 found_prescriptions.append(info)
 
-    # Display results in a message box
-    if found_prescriptions:
+ # Display results in a message box
+if found_prescriptions:
         messagebox.showinfo("Medication Info", "".join(found_prescriptions))
     else:
         messagebox.showinfo("No Medications", "No medications today.")
@@ -615,7 +684,7 @@ def check_upcoming_events():
     tasks_today = tasks.get(today, [])
     appointments_today = appointments.get(today, [])
 
-    if not tasks_today and not appointments_today:
+if not tasks_today and not appointments_today:
         notification.notify(
             title="No Events Today",
             message="There are no upcoming events scheduled for today.",
@@ -629,7 +698,7 @@ def check_upcoming_events():
         if appointments_today:
             message += "Appointments:\n" + "\n".join(appointments_today) + "\n"
 
-        notification.notify(
+notification.notify(
             title="Today's Events",
             message=message,
             app_name="WellNest",
@@ -641,10 +710,10 @@ def send_email_notifications():
     email = simpledialog.askstring("Email", "Enter your email to receive today's event notifications:")
     today = datetime.datetime.now().strftime('%Y-%m-%d')
 
-    tasks_today = tasks.get(today, [])
+tasks_today = tasks.get(today, [])
     appointments_today = appointments.get(today, [])
 
-    if not tasks_today and not appointments_today:
+ if not tasks_today and not appointments_today:
         messagebox.showinfo("No Events", "No upcoming events for today.")
     else:
         body = ""
@@ -653,19 +722,19 @@ def send_email_notifications():
         if appointments_today:
             body += "Appointments for Today:\n" + "\n".join(appointments_today) + "\n"
 
-        send_email_notification(email, "Today's Events", body)
+send_email_notification(email, "Today's Events", body)
 
 
 def send_email_notification(email, subject, body):
     EMAIL_ADDRESS = "your_email@gmail.com"  # Replace with your App Gmail email address
     EMAIL_PASSWORD = "your_app_password"  # Replace with the App Password generated by Google
 
-    msg = MIMEText(body)
+msg = MIMEText(body)
     msg['Subject'] = subject
     msg['From'] = EMAIL_ADDRESS
     msg['To'] = email
 
-    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
         smtp.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
         smtp.send_message(msg)
 
@@ -705,16 +774,16 @@ def manage_task_status():
         manage_window.title(f"Manage Tasks for {selected_date}")
         manage_window.geometry("400x400")
 
-        for task in tasks[selected_date]:
+for task in tasks[selected_date]:
             var = tk.StringVar(value=task['status'])
             label = tk.Label(manage_window, text=f"{task['name']} - Assignee: {task['assignee']}")
             label.pack()
             dropdown = tk.OptionMenu(manage_window, var, "in-progress", "completed")
             dropdown.pack()
 
-            var.trace('w', lambda *args, name=task['name']: update_task_status(selected_date, name, var.get()))
+ var.trace('w', lambda *args, name=task['name']: update_task_status(selected_date, name, var.get()))
 
-        tk.Button(manage_window, text="Save Changes", command=lambda: [save_data(), manage_window.destroy()]).pack(
+ tk.Button(manage_window, text="Save Changes", command=lambda: [save_data(), manage_window.destroy()]).pack(
             pady=10)
     else:
         messagebox.showinfo("No Tasks", f"No tasks found for {selected_date}.")
@@ -754,15 +823,15 @@ def view_and_manage_items(cal):
     tasks_today = tasks.get(selected_date, [])
     appointments_today = appointments.get(selected_date, [])
 
-    if tasks_today or appointments_today:
+if tasks_today or appointments_today:
         manage_window = Toplevel(root)
         manage_window.title(f"Manage Items for {selected_date}")
         manage_window.geometry("400x400")
 
-        task_vars = []
+ task_vars = []
         appointment_vars = []
 
-        if tasks_today:
+ if tasks_today:
             tk.Label(manage_window, text="Tasks:").pack(pady=10)
             for task in tasks_today:
                 var = IntVar()
@@ -770,7 +839,7 @@ def view_and_manage_items(cal):
                 cb.pack(anchor='w')
                 task_vars.append(var)
 
-        if appointments_today:
+if appointments_today:
             tk.Label(manage_window, text="Appointments:").pack(pady=10)
             for app in appointments_today:
                 var = IntVar()
@@ -778,7 +847,7 @@ def view_and_manage_items(cal):
                 cb.pack(anchor='w')
                 appointment_vars.append(var)
 
-        tk.Button(manage_window, text="Delete Selected",
+tk.Button(manage_window, text="Delete Selected",
                   command=lambda: [delete_selected_items(selected_date, task_vars, appointment_vars),
                                    manage_window.destroy()]).pack(pady=20)
 
@@ -792,14 +861,14 @@ def delete_selected_items(selected_date, task_vars, appointment_vars):
         if not tasks[selected_date]:
             del tasks[selected_date]
 
-    if selected_date in appointments:
+if selected_date in appointments:
         apps_to_delete = [app for i, app in enumerate(appointments[selected_date]) if appointment_vars[i].get() == 1]
         for app in apps_to_delete:
             appointments[selected_date].remove(app)
         if not appointments[selected_date]:
             del appointments[selected_date]
 
-    save_data()
+save_data()
 
 
 def delete_medication(prescription_data):
@@ -810,18 +879,18 @@ def delete_medication(prescription_data):
         messagebox.showinfo("Input Error", "Medication name cannot be empty.")
         return
 
-    # Convert input to lowercase for case-insensitive search
-    medication_name_lower = medication_name.lower()
+ # Convert input to lowercase for case-insensitive search
+medication_name_lower = medication_name.lower()
 
-    # Search for the medication in the prescription data
-    medication_found = None
+ # Search for the medication in the prescription data
+ medication_found = None
     for med in prescription_data.keys():
         if med.lower() == medication_name_lower:
             medication_found = med
             break
 
-    # If medication is found, delete it
-    if medication_found:
+ # If medication is found, delete it
+ if medication_found:
         confirmation = messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete '{medication_found}'?")
         if confirmation:
             del prescription_data[medication_found]
@@ -838,7 +907,7 @@ def view_and_read_out_tasks():
     today = datetime.now().strftime('%Y-%m-%d')
     engine = pyttsx3.init()
 
-    tasks_today = tasks.get(today, [])
+tasks_today = tasks.get(today, [])
     if tasks_today:
         tasks_str = "\n".join([task['name'] for task in tasks_today])
         engine.say(f"Today is {datetime.now().strftime('%A')}. Your tasks for today are: {tasks_str}")
@@ -853,7 +922,7 @@ def view_and_read_out_appointments():
     today = datetime.now().strftime('%Y-%m-%d')
     engine = pyttsx3.init()
 
-    appointments_today = appointments.get(today, [])
+appointments_today = appointments.get(today, [])
     if appointments_today:
         appointments_str = "\n".join(appointments_today)
         engine.say(f"Today is {datetime.now().strftime('%A')}. Your appointments for today are: {appointments_str}")
@@ -910,6 +979,8 @@ view_prescriptions_button = tk.Button(root, text="View Prescriptions", command=v
 view_prescriptions_button.pack(pady=10)
 delete_button = tk.Button(root, text="Delete Prescription", command=lambda: delete_medication(prescriptions))
 delete_button.pack(pady=10)
+tk.Button(root, text="Update Prescription Status", command=update_prescription_status).pack(pady=10)
+
 tk.Button(root, text="Close", command=root.quit).pack(pady=20)
 
 # Load data and run splash screen
@@ -918,3 +989,5 @@ splash_screen()
 
 # Run the main loop
 root.mainloop()
+
+
