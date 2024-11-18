@@ -67,7 +67,7 @@ def save_prescriptions(data, filename="prescriptions.json"):
 # Load data on app start
 def load_data():
     global prescriptions, appointments, tasks, notes
-    prescriptions = load_prescriptions()  # Load prescriptions with the new function
+    prescriptions = load_prescriptions()  # Load prescriptions 
     if os.path.exists(appointments_file):
         with open(appointments_file, "r") as file:
             appointments = json.load(file)
@@ -81,7 +81,7 @@ def load_data():
 
 # Save data to files
 def save_data():
-    save_prescriptions(prescriptions)  # Save prescriptions with the new function
+    save_prescriptions(prescriptions)  # Save prescriptions 
     with open(appointments_file, "w") as file:
         json.dump(appointments, file)
     with open(tasks_file, "w") as file:
@@ -182,8 +182,8 @@ def add_medication_schedule():
         messagebox.showinfo("Success", "Medication schedule added.")
 
 
-def submit(day_entry, month_entry, year_entry, days_entry, weeks_entry,
-           prescription_name_entry, medication_description_entry, food_entry, window):
+def submit(day_entry, month_entry, year_entry, days_entry, weeks_entry, 
+        prescription_name_entry, medication_description_entry, food_entry, window):
     startDay = day_entry.get()
     startMon = month_entry.get()
     startYr = year_entry.get()
@@ -409,7 +409,7 @@ def display_medication_graph():
 
 
 
-# SECTION 3 (or near the start of SECTION 4)
+# SECTION 3 (
 
 # Function to view all prescriptions
 def view_prescriptions():
@@ -631,8 +631,7 @@ def open_calendar():
     options_appointment_button.pack(side="left", padx=5)
     options_appointment_button.bind("<Button-1>", open_appointment_options_menu)
 
-    view_appointments_button = tk.Button(right_frame, text="View and Read Out Appointments",
-                                         command=view_and_read_out_appointments)
+    view_appointments_button = tk.Button(right_frame, text="View and Read Out Appointments",command=view_and_read_out_appointments)
     view_appointments_button.pack(pady=5)
 
     # Center frame: Add other buttons
@@ -641,8 +640,7 @@ def open_calendar():
     tk.Button(center_frame, text="Check Upcoming Events", command=check_upcoming_events).pack(pady=5)
     tk.Button(center_frame, text="Send Email Notifications", command=send_email_notifications).pack(pady=5)
     tk.Button(center_frame, text="Manage Task Status", command=manage_task_status).pack(pady=5)
-    tk.Button(center_frame, text="Today's Medications",
-              command=lambda: find_medication_by_date(cal, prescriptions)).pack(pady=5)
+    tk.Button(center_frame, text="Today's Medications", command=lambda: find_medication_by_date(cal, prescriptions)).pack(pady=5)
     tk.Button(center_frame, text="Back to Main Menu", command=calendar_window.destroy).pack(pady=5)
 
 
