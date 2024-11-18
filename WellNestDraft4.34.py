@@ -755,7 +755,7 @@ def add_task(cal):
     if task_name and assignee and task_time:
         if selected_date not in tasks:
             tasks[selected_date] = []
-        task = {'name': task_name, 'assignee': assignee, 'status': 'in-progress', 'time': task_time}
+        task = {'name': task_name, 'assignee': assignee, 'status': 'In-progress', 'time': task_time}
         tasks[selected_date].append(task)
         save_data()
 
@@ -777,7 +777,7 @@ def manage_task_status():
             var = tk.StringVar(value=task['status'])
             label = tk.Label(manage_window, text=f"{task['name']} - Assignee: {task['assignee']}")
             label.pack()
-            dropdown = tk.OptionMenu(manage_window, var, "in-progress", "completed")
+            dropdown = tk.OptionMenu(manage_window, var, "In-progress", "completed")
             dropdown.pack()
 
             var.trace('w', lambda *args, name=task['name']: update_task_status(selected_date, name, var.get()))
